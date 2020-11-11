@@ -1,0 +1,33 @@
+FROM quay.io/pypa/manylinux2010_x86_64
+
+RUN curl -L -o /tmp/cmake.sh \
+  https://github.com/Kitware/CMake/releases/download/v3.19.0-rc1/cmake-3.19.0-rc1-Linux-x86_64.sh && \
+  sh /tmp/cmake.sh --skip-license --prefix=/tmp --include-subdirectory
+
+RUN yum install -y armadillo-devel wget zlib-devel make gcc
+
+RUN ln -s /tmp/cmake-*/bin/* /usr/local/bin
+
+RUN /opt/python/cp36-cp36m/bin/python -m pip install --upgrade twine
+
+RUN /opt/python/cp37-cp37m/bin/python -m pip install --upgrade twine
+
+RUN /opt/python/cp38-cp38/bin/python -m pip install --upgrade twine
+
+RUN /opt/python/cp39-cp39/bin/python -m pip install --upgrade twine
+
+WORKDIR /build
+RUN curl -L -o boost_1_74_0.tar.bz2 https://dl.bintray.com/boostorg/release/1.74.0/source/boost_1_74_0.tar.bz2
+RUN tar -xf boost_1_74_0.tar.bz2
+WORKDIR /build/boost_1_74_0
+COPY python/SeidrFile/user-config.jam /build/boost_1_74_0/tools/build/src/user-config.jam
+RUN ./bootstrap.sh &&  ./b2 python=3.6,3.7,3.8,3.9 system filesystem install
+WORKDIR /io/SeidrFile
+
+RUN yum clean all && rm -rf /build && rm -rf ~/.cache
+
+COPY python /io/
+COPY external/bgzf /io/SeidrFile/bgzf
+COPY src/Seidr/Serialize.* /io/SeidrFile/src/
+
+ENV PLAT=manylinux2010_x86_64

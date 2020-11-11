@@ -1,0 +1,40 @@
+FROM quay.io/pypa/manylinux1_x86_64
+
+RUN yum install -y wget zlib-devel make gcc xz openblas-devel lapack-devel
+
+WORKDIR /build
+RUN curl -o cmake.tar.gz -L https://github.com/Kitware/CMake/archive/v3.5.0-rc3.tar.gz
+RUN tar -xf cmake.tar.gz
+WORKDIR /build/CMake-3.5.0-rc3
+RUN ./bootstrap && gmake -j8 && gmake install
+
+RUN /opt/python/cp36-cp36m/bin/python -m pip install --upgrade twine
+
+RUN /opt/python/cp37-cp37m/bin/python -m pip install --upgrade twine
+
+RUN /opt/python/cp38-cp38/bin/python -m pip install --upgrade twine
+
+RUN /opt/python/cp39-cp39/bin/python -m pip install --upgrade twine
+
+WORKDIR /build
+RUN curl -L -o boost_1_74_0.tar.bz2 https://dl.bintray.com/boostorg/release/1.74.0/source/boost_1_74_0.tar.bz2
+RUN tar -xf boost_1_74_0.tar.bz2
+WORKDIR /build/boost_1_74_0
+COPY python/SeidrFile/user-config.jam /build/boost_1_74_0/tools/build/src/user-config.jam
+RUN ./bootstrap.sh &&  ./b2 python=3.6,3.7,3.8,3.9 system filesystem install
+
+WORKDIR /build
+RUN curl -o arma.tar.xz -L 'https://downloads.sourceforge.net/project/arma/armadillo-7.800.1.tar.xz?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Farma%2Ffiles%2Farmadillo-7.800.1.tar.xz%2Fdownload&ts=1602935626'
+RUN xz -d arma.tar.xz && tar -xvf arma.tar
+WORKDIR /build/armadillo-7.800.1
+RUN ./configure && make && make install
+
+WORKDIR /io/SeidrFile
+
+RUN yum clean all && rm -rf /build && rm -rf ~/.cache
+
+COPY python /io/
+COPY external/bgzf /io/SeidrFile/bgzf
+COPY src/Seidr/Serialize.* /io/SeidrFile/src/
+
+ENV PLAT=manylinux1_x86_64

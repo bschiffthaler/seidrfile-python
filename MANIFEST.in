@@ -1,0 +1,3 @@
+include src/Serialize.h
+include src/wrapper.h
+include bgzf/bgzf.h
